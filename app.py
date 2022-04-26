@@ -7,6 +7,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from contextlib import contextmanager
 import re
+from tkinter import filedialog
 
 
 class MailClient:
@@ -36,7 +37,7 @@ class MailClient:
 
 class OutlookClient(MailClient):
     def __init__(self):
-        super().__init__(port=465, host="smtp-mail.outlook.com")
+        super().__init__(port=465 , host="smtp.office365.com")
 
 
 class YahooMailClient(MailClient):
@@ -64,6 +65,11 @@ class Email:
         self.__headers = None
         self.__mail_client = None
         self.__file_name = None
+        self.__file_types = [('PDF files', '*.pdf'),
+                             ('JPG files', '*.jpg'),
+                             ('PNG files', '*.png'),
+                             ('Python Files', '*.py'),
+                             ('all files', '.*')]
 
     def set_password(self) -> None:
         self.__password = str(input("Enter password: "))
@@ -82,7 +88,8 @@ class Email:
         self.__message = self.__message.format(message)
 
     def set_attachment(self) -> MIMEBase:
-        self.__file_name = 'set_attachment function.png'
+
+        self.__file_name = filedialog.askopenfilename(title="Open a Text File", filetypes=self.__file_types)
         self.__headers = ("Content-Disposition", f"attachment; filename= {format(self.__file_name)}")
         with open(self.__file_name, 'rb') as attachment:
             attach = MIMEBase('application', 'octet-stream')
