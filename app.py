@@ -17,7 +17,7 @@ class MailClient:
         self.__connection_context = ssl.create_default_context()
 
     @contextmanager
-    def server_connection(self, email: str, password: str) -> None:
+    def ssl_connection(self, email: str, password: str) -> None:
         # Create a secure SSL context
         with smtp.SMTP_SSL(self.host, self.port, context=self.__connection_context) as mail_server:
             try:
@@ -32,15 +32,30 @@ class MailClient:
             finally:
                 mail_server.close()
 
+    @contextmanager
+    def tls_connection(self, email: str, password: str) -> None:
+        try:
+            server = smtp.SMTP(host=self.host, port=self.port)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(email, password)
+            yield server
+        except Exception as e:
+            print(e)
+        else:
+            print('Connection successfully established')
+        finally:
+            server.quit()
+
 
 class OutlookClient(MailClient):
     def __init__(self):
-        super().__init__(port=465, host="smtp.office365.com")
+        super().__init__(port=587, host="smtp.office365.com")
 
 
 class YahooMailClient(MailClient):
     pass
-
 
 class GmailClient(MailClient):
     def __init__(self):
@@ -48,14 +63,15 @@ class GmailClient(MailClient):
 
 
 class YandexClient(MailClient):
-    '''
+    """
         Yandex user must generate a new password for the SMTP Connection.
         1- Go to (https://passport.yandex.com/profile).
         2- Click on "Passwords and authorization".
         3- Click on "Create new password" under "App passwords".
         4- Select "Email" and choose a name for your password.
         5- Copy the generated password and use it for logging in through Mymail.
-    '''
+    """
+
     def __init__(self):
         super().__init__(port=465, host="smtp.yandex.com")
 
@@ -127,6 +143,7 @@ class Email:
     def __set_mail_client(self):
         mail_clients = {
             'outlook': OutlookClient,
+            'hotmail': OutlookClient,
             'yahoo': YahooMailClient,
             'gmail': GmailClient,
             'yandex': YandexClient
@@ -135,7 +152,11 @@ class Email:
         self.__mail_client = mail_clients.get(selected_mail_client)
 
     def __send_execute(self) -> None:
-        mail_client_connection = self.__mail_client().server_connection
+        if self.__mail_client == OutlookClient:
+            mail_client_connection = self.__mail_client().tls_connection
+        else:
+            mail_client_connection = self.__mail_client().ssl_connection
+
         with mail_client_connection(self.__from, self.__password) as connection:
             try:
                 connection.sendmail(self.__from, self.__to, self.__mail_init().as_string())
