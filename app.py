@@ -25,10 +25,8 @@ class MailClient:
                 mail_server.login(email, password)
                 yield mail_server
 
-            except smtp.SMTPAuthenticationError:
-                print("E-mail and password are not accepted.")
-            # except Exception as e:
-            #     print('something went wrong')
+            except smtp.SMTPAuthenticationError as e:
+                print(e)
             else:
                 print('Connection successfully established')
             finally:
@@ -37,7 +35,7 @@ class MailClient:
 
 class OutlookClient(MailClient):
     def __init__(self):
-        super().__init__(port=465 , host="smtp.office365.com")
+        super().__init__(port=465, host="smtp.office365.com")
 
 
 class YahooMailClient(MailClient):
@@ -47,6 +45,19 @@ class YahooMailClient(MailClient):
 class GmailClient(MailClient):
     def __init__(self):
         super().__init__(port=465, host="smtp.gmail.com")
+
+
+class YandexClient(MailClient):
+    '''
+        Yandex user must generate a new password for the SMTP Connection.
+        1- Go to (https://passport.yandex.com/profile).
+        2- Click on "Passwords and authorization".
+        3- Click on "Create new password" under "App passwords".
+        4- Select "Email" and choose a name for your password.
+        5- Copy the generated password and use it for logging in through Mymail.
+    '''
+    def __init__(self):
+        super().__init__(port=465, host="smtp.yandex.com")
 
 
 class Email:
@@ -117,7 +128,8 @@ class Email:
         mail_clients = {
             'outlook': OutlookClient,
             'yahoo': YahooMailClient,
-            'gmail': GmailClient
+            'gmail': GmailClient,
+            'yandex': YandexClient
         }
         selected_mail_client = self.__set_domain_name()
         self.__mail_client = mail_clients.get(selected_mail_client)
