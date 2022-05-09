@@ -10,6 +10,7 @@ import re
 from tkinter import filedialog
 import easyimap as imap
 from abc import ABC, abstractmethod
+from bs4 import BeautifulSoup as bs
 
 
 class MailClient:
@@ -75,7 +76,7 @@ class YahooMailClient(MailClient):
 
 class GmailClient(MailClient):
     def __init__(self):
-        super().__init__(port=465, smtp_host="smtp.gmail.com",imap_host="imap.gmail.com")
+        super().__init__(port=465, smtp_host="smtp.gmail.com", imap_host="imap.gmail.com")
 
 
 class YandexClient(MailClient):
@@ -257,9 +258,9 @@ class EmailReceiver(Email):
 
 if __name__ == '__main__':
     try:
-        email = EmailSender()
+        email = EmailReceiver()
         email.login()
-        email.send()
+        email.receive()
     except RuntimeError as e:
         print(e)
     else:
