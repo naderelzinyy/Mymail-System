@@ -37,12 +37,12 @@ class Database:
 
 class User(ABC):
     def __init__(self):
-        self.__first_name = None
-        self.__last_name = None
-        self.__username = None
-        self.__password = None
-        self.__dob = None
-        self.__email = None
+        self.first_name = None
+        self.last_name = None
+        self.username = None
+        self.password = None
+        self.dob = None
+        self.email = None
         self.database = Database()
 
     def __set_name(self):
@@ -72,6 +72,9 @@ class User(ABC):
     def execute(self):
         pass
 
+    def show_user_info(self):
+        print(self.first_name, self.last_name, self.username, self.password, self.dob, self.email)
+
 
 class Register(User):
     def __init__(self):
@@ -79,30 +82,30 @@ class Register(User):
         self.db = Database()
 
     def __set_name(self):
-        self.__first_name = str(input("Enter first name: "))
-        self.__last_name = str(input("Enter last name: "))
+        self.first_name = str(input("Enter first name: "))
+        self.last_name = str(input("Enter last name: "))
 
     def __set_username(self):
         username = str(input("Enter username: "))
         if self.__username_check(username):
-            self.__username = username
+            self.username = username
         else:
             print('The username you entered is taken please try another one')
             self.__set_username()
 
     def __set_password(self):
-        self.__password = str(input("Enter password: "))
+        self.password = str(input("Enter password: "))
 
     def __set_email(self):
         email = str(input("Enter email: "))
         if self.__email_check(email):
-            self.__email = email
+            self.email = email
         else:
             print('The email you entered is used')
             self.__set_email()
 
     def __set_dob(self):
-        self.__dob = str(input("Enter date of birth: "))
+        self.dob = str(input("Enter date of birth: "))
 
     def __username_check(self, username):
         usernames = [row[0] for row in self.db.returnable_execute("SELECT username FROM user", iteratable=True)]
@@ -118,12 +121,12 @@ class Register(User):
         return True
 
     def __create_new_user(self):
-        new_user_credentials = [self.__first_name,
-                                self.__last_name,
-                                self.__username,
-                                self.__password,
-                                self.__dob,
-                                self.__email]
+        new_user_credentials = [self.first_name,
+                                self.last_name,
+                                self.username,
+                                self.password,
+                                self.dob,
+                                self.email]
         try:
             self.db.unreturnable_execute(
                 "INSERT INTO user(first_name, last_name, username, password, dob, email) values (?,?,?,?,?,?)",
@@ -145,31 +148,50 @@ class Register(User):
 class Login(User):
     def __init__(self):
         super().__init__()
-        self.db = Database()
-
-    def __set_name(self):
-        pass
+        self.username = None
+        self.password = None
+        self.__db = Database()
+        self.__role = {
+            'user': False,
+            'admin': False
+        }
 
     def __set_username(self):
-        self.__username = str(input("Enter username: "))
+        self.username = str(input("Enter username: "))
 
     def __set_password(self):
-        self.__password = str(input("Enter password: "))
+        self.password = str(input("Enter password: "))
 
     def __set_login_credentials(self):
         self.__set_username()
         self.__set_password()
-        if not self.__authenticate(self.__username, self.__password):
+        if not self.__authenticate(self.username, self.password):
             print('wrong username or password!')
             self.__set_login_credentials()
         else:
+            user.username = self.username
+            user.password = self.password
+            self.__role['user'] = True
             print('logged in!!')
 
-    def __set_email(self):
+    def __username_check(self, username):
         pass
 
-    def __set_dob(self):
+    def __email_check(self, email):
         pass
+
+    def __set_name(self):
+        with self.__db.database_connection() as cursor:
+            user.first_name = str(cursor.execute("SELECT first_name FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+            user.last_name = str(cursor.execute("SELECT last_name FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+
+    def __set_email(self):
+        with self.__db.database_connection() as cursor:
+            user.email = str(cursor.execute("SELECT email FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+
+    def __set_dob(self):
+        with self.__db.database_connection() as cursor:
+            user.dob = str(cursor.execute("SELECT date(dob) FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
 
     @staticmethod
     def __authenticate(username: str, password: str) -> bool:
@@ -184,14 +206,20 @@ class Login(User):
 
     def execute(self):
         self.__set_login_credentials()
+        if self.__role.get('user'):
+            self.__set_name()
+            self.__set_email()
+            self.__set_dob()
 
 
 if __name__ == '__main__':
     db = Database()
     register = Register()
+    user = User()
     login = Login()
     # register.execute()
     login.execute()
+    user.show_user_info()
     # db.execute("CREATE TABLE IF NOT EXISTS 'user' ('user_id' INTEGER NOT NULL , 'first_name'	TEXT"
     #            "NOT NULL, 'last_name'	" "TEXT NOT NULL, 'username' TEXT NOT NULL, 'password'	TEXT NOT NULL, "
     #            "'dob' TEXT NOT "
