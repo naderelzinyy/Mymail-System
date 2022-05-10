@@ -1,5 +1,5 @@
 import sqlite3 as sql
-from abc import ABC
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
 
@@ -45,30 +45,35 @@ class User(ABC):
         self.email = None
         self.database = Database()
 
+    @abstractmethod
     def __set_name(self):
         pass
 
+    @abstractmethod
     def __set_email(self):
         pass
 
+    @abstractmethod
     def __set_username(self):
         pass
 
+    @abstractmethod
     def __set_password(self):
         pass
 
+    @abstractmethod
     def __set_dob(self):
         pass
 
+    @abstractmethod
     def __username_check(self, username):
         pass
 
+    @abstractmethod
     def __email_check(self, email):
         pass
 
-    def __create_new_user(self):
-        pass
-
+    @abstractmethod
     def execute(self):
         pass
 
