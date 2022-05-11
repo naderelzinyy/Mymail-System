@@ -19,7 +19,7 @@ class Database:
             self.connection.commit()
             self.connection.close()
 
-    def unreturnable_execute(self, query: str, data=None):
+    def unreturnable_execute(self, query: str, data=None) -> None:
         with self.database_connection() as cursor:
             if data is not None:
                 cursor.executemany(query, data)
@@ -36,9 +36,6 @@ class Database:
 
 
 class User(ABC):
-    def __init__(self):
-        self.database = Database()
-
     @abstractmethod
     def _set_name(self):
         pass
@@ -217,34 +214,3 @@ if __name__ == '__main__':
     # register.execute()
     login.execute()
     login.show_user_info()
-
-    # user.show_user_info()
-    # db.execute("CREATE TABLE IF NOT EXISTS 'user' ('user_id' INTEGER NOT NULL , 'first_name'	TEXT"
-    #            "NOT NULL, 'last_name'	" "TEXT NOT NULL, 'username' TEXT NOT NULL, 'password'	TEXT NOT NULL, "
-    #            "'dob' TEXT NOT "
-    #            "NULL, 'email'	TEXT NOT " "NULL, PRIMARY KEY('user_id' AUTOINCREMENT))")
-    #
-    # db.execute("CREATE TABLE IF NOT EXISTS 'emails' ("
-    #            "'email_id'	INTEGER NOT NULL ,"
-    #            "'email' TEXT NOT NULL,"
-    #            "'email_password' TEXT NOT NULL,"
-    #            "'user_id' INTEGER,"
-    #            "PRIMARY KEY('email_id' AUTOINCREMENT),"
-    #            "FOREIGN KEY('user_id') REFERENCES 'user'('user_id'))")
-    #
-    # db.execute("CREATE TABLE IF NOT EXISTS 'clients' ("
-    #            "'client_id'	INTEGER NOT NULL ,"
-    #            "'client_name'	TEXT NOT NULL,"
-    #            "PRIMARY KEY('client_id' AUTOINCREMENT))")
-    #
-    # db.execute("CREATE TABLE IF NOT EXISTS 'user_clients' ("
-    #            "'user_id'	INTEGER ,"
-    #            "'client_id'	INTEGER,"
-    #            "FOREIGN KEY('user_id') REFERENCES 'user'('user_id'),"
-    #            "FOREIGN KEY('client_id') REFERENCES 'clients'('client_id'))")
-
-    # db.execute("INSERT INTO user(first_name, last_name, username, password, dob, email) values (?,?,?,?,?,?)",
-    #            data=users_data)
-    # db.execute("INSERT INTO clients (client_name) values (?)", data=clients)
-    #
-    # db.select_execute("clients")

@@ -10,6 +10,7 @@ import re
 from tkinter import filedialog
 import easyimap as imap
 from abc import ABC, abstractmethod
+from database import *
 from bs4 import BeautifulSoup as bs
 
 
@@ -67,7 +68,7 @@ class MailClient:
 
 class OutlookClient(MailClient):
     def __init__(self):
-        super().__init__(port=587, smtp_host="smtp.office365.com",imap_host="imap-mail.outlook.com")
+        super().__init__(port=587, smtp_host="smtp.office365.com", imap_host="imap-mail.outlook.com")
 
 
 class YahooMailClient(MailClient):
@@ -90,7 +91,7 @@ class YandexClient(MailClient):
     """
 
     def __init__(self):
-        super().__init__(port=465, smtp_host="smtp.yandex.com",imap_host="imap.yandex.com")
+        super().__init__(port=465, smtp_host="smtp.yandex.com", imap_host="imap.yandex.com")
 
 
 class Email(ABC):
@@ -241,19 +242,25 @@ class EmailReceiver(Email):
         self.set_password()
         self.set_mail_client()
 
+    def html_to_text(self, message) -> str:
+        message = bs(message, "html.parser").get_text("\n")
+        return message
+
     def receive(self) -> None:
         mail_client_connection = self.__mail_client().imap_connection
         with mail_client_connection(self.__email, self.__password) as connection:
             connection.listids()
-            email = connection.mail(connection.listids()[3])
+            rec_email = connection.mail(connection.listids()[3])
+            # Converting html to text function
+            message = self.html_to_text(rec_email.body)
             # for title
-            print(email.title)
+            print("Email title: ", rec_email.title)
             # for the sender’s email address
-            print(email.from_addr)
+            print("From : ", rec_email.from_addr)
             # for the main content of the email
-            print(email.body)
+            print("\n\n", message)
             # for any type of attachment
-            print(email.attachments)
+            print("Attachment : ", rec_email.attachments)
 
 
 if __name__ == '__main__':
@@ -264,4 +271,4 @@ if __name__ == '__main__':
     except RuntimeError as e:
         print(e)
     else:
-        print('E-mail Successfully sent!')
+        print('Done!')
