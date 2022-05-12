@@ -10,6 +10,8 @@ import re
 from tkinter import filedialog
 import easyimap as imap
 from abc import ABC, abstractmethod
+
+import database
 from database import *
 from bs4 import BeautifulSoup as bs
 
@@ -241,8 +243,10 @@ class EmailReceiver(Email):
         self.set_email()
         self.set_password()
         self.set_mail_client()
+        # login = Login()
+        # login.execute()
 
-    def html_to_text(self, message) -> str:
+    def __html_to_text(self, message) -> str:
         message = bs(message, "html.parser").get_text("\n")
         return message
 
@@ -250,9 +254,9 @@ class EmailReceiver(Email):
         mail_client_connection = self.__mail_client().imap_connection
         with mail_client_connection(self.__email, self.__password) as connection:
             connection.listids()
-            rec_email = connection.mail(connection.listids()[3])
+            rec_email = connection.mail(connection.listids()[0])
             # Converting html to text function
-            message = self.html_to_text(rec_email.body)
+            message = self.__html_to_text(rec_email.body)
             # for title
             print("Email title: ", rec_email.title)
             # for the sender’s email address
@@ -260,14 +264,19 @@ class EmailReceiver(Email):
             # for the main content of the email
             print("\n\n", message)
             # for any type of attachment
-            print("Attachment : ", rec_email.attachments)
+            if rec_email.attachments:
+                print("Attachment : ", rec_email.attachments)
+            print("Date: ", rec_email.date)
+
+    def store_email(self,):
+        pass
 
 
 if __name__ == '__main__':
     try:
         email = EmailReceiver()
         email.login()
-        email.receive()
+        # email.receive()
     except RuntimeError as e:
         print(e)
     else:

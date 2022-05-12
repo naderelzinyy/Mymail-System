@@ -186,10 +186,9 @@ class Login(User):
         with self.__db.database_connection() as cursor:
             self.dob = str(cursor.execute("SELECT date(dob) FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
 
-    @staticmethod
-    def __authenticate(username: str, password: str) -> bool:
+    def __authenticate(self, username: str, password: str) -> bool:
         # pwd = db.returnable_execute(f"SELECT password FROM user WHERE username = ?", data=username, iteratable=False)
-        with db.database_connection() as cursor:
+        with self.__db.database_connection() as cursor:
             pwd = str(cursor.execute("SELECT password FROM user WHERE username = ?", (username,)).fetchone()).strip("('',)'")
         if pwd == password:
             return True
@@ -205,6 +204,24 @@ class Login(User):
 
     def show_user_info(self):
         print(self.first_name, self.last_name, self.username, self.password, self.dob, self.email)
+
+
+class UserAccounts:
+    def __init__(self):
+        self.email = None
+        self.password = None
+
+    def __set_email(self):
+        self.email = str(input("Enter Email : "))
+
+    def __set_password(self):
+        self.password = str(input("Enter password : "))
+
+    def __set_account_credentials(self):
+        pass
+
+    def __store_account_credentials(self):
+        pass
 
 
 if __name__ == '__main__':
