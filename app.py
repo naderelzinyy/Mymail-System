@@ -11,8 +11,7 @@ from tkinter import filedialog
 import easyimap as imap
 from abc import ABC, abstractmethod
 
-import database
-from database import *
+import database as db_file
 from bs4 import BeautifulSoup as bs
 
 
@@ -32,8 +31,8 @@ class MailClient:
                 mail_server.login(email, password)
                 yield mail_server
 
-            except smtp.SMTPAuthenticationError as e:
-                print(e)
+            except smtp.SMTPAuthenticationError:
+                print("Username and Password not accepted")
             else:
                 print('Connection successfully established')
             finally:
@@ -118,8 +117,64 @@ class Email(ABC):
         pass
 
     @abstractmethod
-    def login(self):
+    def login(self, username=None):
         pass
+
+
+class EmailAccountManager(Email):
+    """
+    Stores the accounts of each user in the Database.
+    """
+    def __init__(self):
+        self.__mail_client = None
+        self.email = None
+        self.password = None
+        self.domain_name = None
+        self.account_valid = False
+
+    def set_email(self):
+        self.email = str(input("Enter Email : "))
+
+    def set_password(self):
+        self.password = str(input("Enter password : "))
+
+    def set_domain_name(self):
+        domain = re.search("[@-][\w]+", self.email).group()
+        self.domain_name = domain[1:]
+        return self.domain_name
+
+    def set_mail_client(self):
+        selected_mail_client = self.set_domain_name()
+        self.__mail_client = super().mail_clients.get(selected_mail_client)
+
+    def set_credentials(self):
+        self.set_email()
+        self.set_password()
+
+    def login(self, username=None):
+        """
+        Checks if the credentials are valid or not.
+        """
+        self.set_credentials()
+        self.set_mail_client()
+        mail_client_connection = self.__mail_client().ssl_connection
+        try:
+            with mail_client_connection(self.email, self.password) as server:
+                pass
+        except:
+            print("Please try again")
+            self.login()
+        else:
+            self.account_valid = True
+            print("Account authenticated !")
+            self.__store_account_credentials(username=username)
+
+    def __store_account_credentials(self, username):
+        db = db_file.Database()
+        with db.database_connection() as cursor:
+            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip("('',)'")
+            client_id = str(cursor.execute("SELECT client_id FROM clients WHERE client_name = ?", (self.domain_name,)).fetchone()).strip("('',)'")
+            cursor.execute("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)", (self.email, self.password, user_id, client_id))
 
 
 class EmailSender(Email):
@@ -203,7 +258,7 @@ class EmailSender(Email):
             except RuntimeError("generator didn't yield"):
                 pass
 
-    def login(self) -> None:
+    def login(self, username=None) -> None:
         """ Login into the email client.
         """
         self.set_sender()
@@ -239,14 +294,14 @@ class EmailReceiver(Email):
         selected_mail_client = self.set_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
-    def login(self):
+    def login(self, username=None):
         self.set_email()
         self.set_password()
         self.set_mail_client()
         # login = Login()
         # login.execute()
 
-    def __html_to_text(self, message) -> str:
+    def __html_to_text(self, message: str) -> str:
         message = bs(message, "html.parser").get_text("\n")
         return message
 
@@ -274,7 +329,7 @@ class EmailReceiver(Email):
 
 if __name__ == '__main__':
     try:
-        email = EmailReceiver()
+        email = EmailAccountManager()
         email.login()
         # email.receive()
     except RuntimeError as e:

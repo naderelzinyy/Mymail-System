@@ -144,7 +144,7 @@ class Login(User):
         self.username = None
         self.password = None
         self.__db = Database()
-        self.__role = {
+        self.role = {
             'user': False,
             'admin': False
         }
@@ -164,7 +164,7 @@ class Login(User):
         else:
             self.username = self.username
             self.password = self.password
-            self.__role['user'] = True
+            self.role['user'] = True
             print('logged in!!')
 
     def _username_check(self, username):
@@ -197,31 +197,13 @@ class Login(User):
 
     def execute(self):
         self.__set_login_credentials()
-        if self.__role.get('user'):
+        if self.role.get('user'):
             self._set_name()
             self._set_email()
             self._set_dob()
 
     def show_user_info(self):
         print(self.first_name, self.last_name, self.username, self.password, self.dob, self.email)
-
-
-class UserAccounts:
-    def __init__(self):
-        self.email = None
-        self.password = None
-
-    def __set_email(self):
-        self.email = str(input("Enter Email : "))
-
-    def __set_password(self):
-        self.password = str(input("Enter password : "))
-
-    def __set_account_credentials(self):
-        pass
-
-    def __store_account_credentials(self):
-        pass
 
 
 if __name__ == '__main__':
