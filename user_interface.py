@@ -9,12 +9,16 @@ class Interface:
         self.register = db_file.Register()
         self.account_manager = app_file.EmailAccountManager()
         self.email_sender = app_file.EmailSender()
+        self.email_receiver = app_file.EmailReceiver()
         self.choice = None
+        self.selected_account = None
         self.scenarios = {
             1: self.login.execute,
             2: self.register.execute,
             3: self.account_manager.get_user_accounts,
             4: self.account_manager.login,
+            5: self.send_execute,
+            6: self.receive_execute,
         }
 
     def initial_page(self) -> None:
@@ -34,10 +38,10 @@ class Interface:
             self.view_accounts()
         elif self.choice == 4:
             self.scenarios.get(self.choice)(username=self.login.username)
-        elif self.choice == 5:
-            self.choose_mail_client_page()
+        elif self.choice == 5 or self.choice == 6:
+            self.scenarios.get(self.choice)()
         else:
-            print("Choose 3 or 4")
+            print("Wrong value.\nPlese choose again.")
             self.main_page()
 
     def choose_mail_client_page(self):
@@ -45,12 +49,17 @@ class Interface:
         for account in accounts:
             print(accounts.index(account)+1, "- "+account[0])
         account_index = int(input("Choose an account : \n"))
-        selected_account = accounts[account_index-1][0]
-        self.send_execute(selected_account)
+        self.selected_account = accounts[account_index-1][0]
 
-    def send_execute(self, sender):
-        self.email_sender.login(username=self.login.username, sender=sender)
+    def send_execute(self):
+        self.choose_mail_client_page()
+        self.email_sender.login(sender=self.selected_account)
         self.email_sender.send()
+
+    def receive_execute(self):
+        self.choose_mail_client_page()
+        self.email_receiver.login(receiver=self.selected_account)
+        self.email_receiver.receive()
 
     def view_accounts(self):
         accounts = self.scenarios.get(self.choice)(username=self.login.username)

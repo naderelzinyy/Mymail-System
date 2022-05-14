@@ -269,7 +269,7 @@ class EmailSender(Email):
             except RuntimeError("generator didn't yield"):
                 pass
 
-    def login(self, username=None, sender=None) -> None:
+    def login(self, sender=None) -> None:
         """ Login into the email client.
         """
         db = db_file.Database()
@@ -294,11 +294,11 @@ class EmailReceiver(Email):
         self.__password = None
         self.__mail_client = None
 
-    def set_email(self):
-        self.__email = str(input("Enter Email: "))
+    def set_email(self, receiver):
+        self.__email = receiver
 
-    def set_password(self):
-        self.__password = str(input("Enter Password: "))
+    def set_password(self, password=None):
+        self.__password = password
 
     def set_domain_name(self):
         domain = re.search("[@-][\w]+", self.__email).group()
@@ -309,12 +309,14 @@ class EmailReceiver(Email):
         selected_mail_client = self.set_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
-    def login(self, username=None):
-        self.set_email()
-        self.set_password()
+    def login(self, receiver=None):
+
+        db = db_file.Database()
+        with db.database_connection() as cursor:
+            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (receiver,)).fetchone()).strip("('',)'")
+        self.set_email(receiver)
+        self.set_password(password=password)
         self.set_mail_client()
-        # login = Login()
-        # login.execute()
 
     def __html_to_text(self, message: str) -> str:
         message = bs(message, "html.parser").get_text("\n")
