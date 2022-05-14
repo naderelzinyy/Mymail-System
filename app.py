@@ -243,7 +243,9 @@ class EmailSender(Email):
         mail_content["From"] = self.__from
         mail_content["To"] = self.__to
         mail_content.attach(MIMEText(self.__message, 'html'))
-        mail_content.attach(self.set_attachment())
+        attachment_req = str(input(" Do you want to add an attachment ? (y/n) "))
+        if attachment_req == "y":
+            mail_content.attach(self.set_attachment())
         return mail_content
 
     def set_domain_name(self) -> str:
