@@ -12,7 +12,8 @@ class Interface:
         self.scenarios = {
             1: self.login.execute,
             2: self.register.execute,
-            3: self.account_manager.login
+            3: self.account_manager.view_accounts,
+            4: self.account_manager.login,
         }
 
     def initial_page(self) -> None:
