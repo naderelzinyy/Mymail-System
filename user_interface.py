@@ -59,7 +59,7 @@ class Interface:
     def receive_execute(self):
         self.choose_mail_client_page()
         self.email_receiver.login(receiver=self.selected_account)
-        self.email_receiver.receive()
+        self.email_receiver.receive_unseen_emails()
 
     def view_accounts(self):
         accounts = self.scenarios.get(self.choice)(username=self.login.username)

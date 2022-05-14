@@ -322,23 +322,24 @@ class EmailReceiver(Email):
         message = bs(message, "html.parser").get_text("\n")
         return message
 
-    def receive(self) -> None:
+    def receive_unseen_emails(self) -> None:
         mail_client_connection = self.__mail_client().imap_connection
         with mail_client_connection(self.__email, self.__password) as connection:
-            connection.listids()
-            rec_email = connection.mail(connection.listids()[0])
-            # Converting html to text function
-            message = self.__html_to_text(rec_email.body)
-            # for title
-            print("Email title: ", rec_email.title)
-            # for the sender’s email address
-            print("From : ", rec_email.from_addr)
-            # for the main content of the email
-            print("\n\n", message)
-            # for any type of attachment
-            if rec_email.attachments:
-                print("Attachment : ", rec_email.attachments)
-            print("Date: ", rec_email.date)
+            rec_emails = list(connection.unseen())
+            for mail in rec_emails:
+                print(rec_emails.index(mail)+1, "- From : "+mail.from_addr, "|| ", mail.title)
+            # # Converting html to text function
+            # message = self.__html_to_text(rec_email[0].body)
+            # # for title
+            # print("Email title: ", str(rec_email[0].title))
+            # # for the sender’s email address
+            # print("From : ", rec_email.from_addr)
+            # # for the main content of the email
+            # print("\n\n", message)
+            # # for any type of attachment
+            # if rec_email.attachments:
+            #     print("Attachment : ", rec_email.attachments)
+            # print("Date: ", rec_email.date)
 
     def store_email(self,):
         pass
