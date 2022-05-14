@@ -10,7 +10,7 @@ import re
 from tkinter import filedialog
 import easyimap as imap
 from abc import ABC, abstractmethod
-
+from datetime import datetime, date
 import database as db_file
 from bs4 import BeautifulSoup as bs
 
@@ -120,6 +120,13 @@ class Email(ABC):
     def login(self, username=None):
         pass
 
+    @abstractmethod
+    def store_emails(self):
+        pass
+
+    @abstractmethod
+    def __html_to_text(self, message: str) -> str:
+        pass
 
 class EmailAccountManager(Email):
     """
@@ -189,6 +196,11 @@ class EmailAccountManager(Email):
             accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
         return accounts
 
+    def store_emails(self):
+        pass
+
+    def __html_to_text(self, message: str) -> str:
+        pass
 
 class EmailSender(Email):
     def __init__(self):
@@ -228,6 +240,7 @@ class EmailSender(Email):
     def set_message(self) -> None:
         message = str(input("Enter email content: "))
         self.__message = self.__message.format(message)
+        self.__message = self.__html_to_text(self.__message)
 
     def set_attachment(self) -> MIMEBase:
 
@@ -257,6 +270,10 @@ class EmailSender(Email):
         domain_name = domain[1:]
         return domain_name
 
+    def __html_to_text(self, message: str) -> str:
+        message = bs(message, "html.parser").get_text("\n")
+        return message
+
     def set_mail_client(self):
 
         selected_mail_client = self.set_domain_name()
@@ -272,6 +289,8 @@ class EmailSender(Email):
                 connection.sendmail(self.__from, self.__to, self.__mail_init().as_string())
             except RuntimeError("generator didn't yield"):
                 pass
+            else:
+                self.store_emails()
 
     def login(self, sender=None) -> None:
         """ Login into the email client.
@@ -291,6 +310,17 @@ class EmailSender(Email):
         self.set_subject()
         self.set_message()
         self.__send_execute()
+
+    def store_emails(self):
+        db = db_file.Database()
+        date_sent = str(datetime.now()) + str(datetime.today())
+        with db.database_connection() as cursor:
+            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
+                                                (self.__from,)).fetchone()).strip("('',)'"))
+            stored_email = [self.__from, self.__to, self.__message, self.__subject, date_sent, account_id, "sent"]
+            cursor.executemany(
+                "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
+                " values (?,?,?,?,?,?,?) ", [stored_email])
 
 
 class EmailReceiver(Email):
@@ -335,7 +365,7 @@ class EmailReceiver(Email):
         with mail_client_connection(self.__email, self.__password) as connection:
             self.rec_emails = list(connection.unseen())
             if self.rec_emails:
-                self.store_email()
+                self.store_emails()
                 for mail in self.rec_emails:
                     print(self.rec_emails.index(mail) + 1, "- From : " + mail.from_addr, "|| ", mail.title)
             else:
@@ -353,27 +383,17 @@ class EmailReceiver(Email):
                 #     print("Attachment : ", rec_email.attachments)
                 # print("Date: ", rec_email.date)
 
-    def store_email(self):
+    def store_emails(self):
         db = db_file.Database()
         with db.database_connection() as cursor:
-            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?", (self.__email,)).fetchone()).strip("('',)'"))
+            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
+                                                (self.__email,)).fetchone()).strip("('',)'"))
             for mail in self.rec_emails:
                 message = self.__html_to_text(mail.body)
                 stored_email = [mail.from_addr, mail.to, message, mail.title, mail.date, account_id, "received"]
                 cursor.executemany(
                     "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
                     " values (?,?,?,?,?,?,?) ", [stored_email])
-                # # Converting html to text function
-                # # for title
-                # print("Email title: ", mail.title)
-                # # for the sender’s email address
-                # print("From : ", mail.from_addr)
-                # # for the main content of the email
-                # print("\n\n", message)
-                # # for any type of attachment
-                # if mail.attachments:
-                #     print("Attachment : ", mail.attachments)
-                # print("Date: ", mail.date)
 
 
 if __name__ == '__main__':
