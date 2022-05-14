@@ -126,6 +126,7 @@ class EmailAccountManager(Email):
     - Stores the accounts of each user in the Database.
     - Views the accounts of each user
     """
+
     def __init__(self):
         self.__mail_client = None
         self.email = None
@@ -173,14 +174,17 @@ class EmailAccountManager(Email):
     def __store_account_credentials(self, username):
         db = db_file.Database()
         with db.database_connection() as cursor:
-            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip("('',)'")
-            client_id = str(cursor.execute("SELECT client_id FROM clients WHERE client_name = ?", (self.domain_name,)).fetchone()).strip("('',)'")
-            cursor.execute("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)", (self.email, self.password, user_id, client_id))
+            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
+                "('',)'")
+            client_id = str(cursor.execute("SELECT client_id FROM clients WHERE client_name = ?",
+                                           (self.domain_name,)).fetchone()).strip("('',)'")
+            cursor.execute("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)",
+                           (self.email, self.password, user_id, client_id))
 
     def get_user_accounts(self, username) -> list:
         db = db_file.Database()
         with db.database_connection() as cursor:
-            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone())\
+            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()) \
                 .strip("('',)'")
             accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
         return accounts
@@ -275,7 +279,9 @@ class EmailSender(Email):
         db = db_file.Database()
 
         with db.database_connection() as cursor:
-            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip("('',)'")
+            password = str(
+                cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip(
+                "('',)'")
         self.set_sender(sender)
         self.set_password(password=password)
         self.set_mail_client()
@@ -293,6 +299,7 @@ class EmailReceiver(Email):
         self.__email = None
         self.__password = None
         self.__mail_client = None
+        self.rec_emails = []
 
     def set_email(self, receiver):
         self.__email = receiver
@@ -313,7 +320,8 @@ class EmailReceiver(Email):
 
         db = db_file.Database()
         with db.database_connection() as cursor:
-            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (receiver,)).fetchone()).strip("('',)'")
+            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?",
+                                          (receiver,)).fetchone()).strip("('',)'")
         self.set_email(receiver)
         self.set_password(password=password)
         self.set_mail_client()
@@ -325,10 +333,11 @@ class EmailReceiver(Email):
     def receive_unseen_emails(self) -> None:
         mail_client_connection = self.__mail_client().imap_connection
         with mail_client_connection(self.__email, self.__password) as connection:
-            rec_emails = list(connection.unseen())
-            if rec_emails:
-                for mail in rec_emails:
-                    print(rec_emails.index(mail)+1, "- From : "+mail.from_addr, "|| ", mail.title)
+            self.rec_emails = list(connection.unseen())
+            if self.rec_emails:
+                self.store_email()
+                for mail in self.rec_emails:
+                    print(self.rec_emails.index(mail) + 1, "- From : " + mail.from_addr, "|| ", mail.title)
             else:
                 print("No new emails !")
                 # # Converting html to text function
@@ -344,8 +353,27 @@ class EmailReceiver(Email):
                 #     print("Attachment : ", rec_email.attachments)
                 # print("Date: ", rec_email.date)
 
-    def store_email(self,):
-        pass
+    def store_email(self):
+        db = db_file.Database()
+        with db.database_connection() as cursor:
+            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?", (self.__email,)).fetchone()).strip("('',)'"))
+            for mail in self.rec_emails:
+                message = self.__html_to_text(mail.body)
+                stored_email = [mail.from_addr, mail.to, message, mail.title, mail.date, account_id, "received"]
+                cursor.executemany(
+                    "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
+                    " values (?,?,?,?,?,?,?) ", [stored_email])
+                # # Converting html to text function
+                # # for title
+                # print("Email title: ", mail.title)
+                # # for the sender’s email address
+                # print("From : ", mail.from_addr)
+                # # for the main content of the email
+                # print("\n\n", message)
+                # # for any type of attachment
+                # if mail.attachments:
+                #     print("Attachment : ", mail.attachments)
+                # print("Date: ", mail.date)
 
 
 if __name__ == '__main__':
