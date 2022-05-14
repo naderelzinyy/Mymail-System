@@ -184,7 +184,6 @@ class EmailAccountManager(Email):
                 .strip("('',)'")
             accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
         return accounts
-        # print(accounts.index(account)+1, "- "+account[0])
 
 
 class EmailSender(Email):
@@ -210,11 +209,11 @@ class EmailSender(Email):
                              ('Python Files', '*.py'),
                              ('all files', '.*')]
 
-    def set_password(self) -> None:
-        self.__password = str(input("Enter password: "))
+    def set_password(self, password=None) -> None:
+        self.__password = password
 
-    def set_sender(self) -> None:
-        self.__from = str(input("Enter your email: "))
+    def set_sender(self, sender: str) -> None:
+        self.__from = sender
 
     def set_recipient(self) -> None:
         self.__to = str(input("Enter recipient email: "))
@@ -268,11 +267,15 @@ class EmailSender(Email):
             except RuntimeError("generator didn't yield"):
                 pass
 
-    def login(self, username=None) -> None:
+    def login(self, username=None, sender=None) -> None:
         """ Login into the email client.
         """
-        self.set_sender()
-        self.set_password()
+        db = db_file.Database()
+
+        with db.database_connection() as cursor:
+            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip("('',)'")
+        self.set_sender(sender)
+        self.set_password(password=password)
         self.set_mail_client()
 
     def send(self) -> None:

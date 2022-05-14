@@ -8,6 +8,7 @@ class Interface:
         self.login = db_file.Login()
         self.register = db_file.Register()
         self.account_manager = app_file.EmailAccountManager()
+        self.email_sender = app_file.EmailSender()
         self.choice = None
         self.scenarios = {
             1: self.login.execute,
@@ -28,19 +29,28 @@ class Interface:
             self.main_page()
 
     def main_page(self) -> None:
-        self.choice = int(input("3- View email clients \n4- Add new email client \n5- Send an email \n6- Open inbox"))
+        self.choice = int(input("3- View email clients \n4- Add new email client \n5- Send an email \n6- Open inbox \n"))
         if self.choice == 3:
             self.view_accounts()
         elif self.choice == 4:
             self.scenarios.get(self.choice)(username=self.login.username)
         elif self.choice == 5:
-            pass
+            self.choose_mail_client_page()
         else:
             print("Choose 3 or 4")
             self.main_page()
 
     def choose_mail_client_page(self):
-        pass
+        accounts = self.scenarios.get(3)(username=self.login.username)
+        for account in accounts:
+            print(accounts.index(account)+1, "- "+account[0])
+        account_index = int(input("Choose an account : \n"))
+        selected_account = accounts[account_index-1][0]
+        self.send_execute(selected_account)
+
+    def send_execute(self, sender):
+        self.email_sender.login(username=self.login.username, sender=sender)
+        self.email_sender.send()
 
     def view_accounts(self):
         accounts = self.scenarios.get(self.choice)(username=self.login.username)
