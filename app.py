@@ -326,20 +326,23 @@ class EmailReceiver(Email):
         mail_client_connection = self.__mail_client().imap_connection
         with mail_client_connection(self.__email, self.__password) as connection:
             rec_emails = list(connection.unseen())
-            for mail in rec_emails:
-                print(rec_emails.index(mail)+1, "- From : "+mail.from_addr, "|| ", mail.title)
-            # # Converting html to text function
-            # message = self.__html_to_text(rec_email[0].body)
-            # # for title
-            # print("Email title: ", str(rec_email[0].title))
-            # # for the sender’s email address
-            # print("From : ", rec_email.from_addr)
-            # # for the main content of the email
-            # print("\n\n", message)
-            # # for any type of attachment
-            # if rec_email.attachments:
-            #     print("Attachment : ", rec_email.attachments)
-            # print("Date: ", rec_email.date)
+            if rec_emails:
+                for mail in rec_emails:
+                    print(rec_emails.index(mail)+1, "- From : "+mail.from_addr, "|| ", mail.title)
+            else:
+                print("No new emails !")
+                # # Converting html to text function
+                # message = self.__html_to_text(rec_email[0].body)
+                # # for title
+                # print("Email title: ", str(rec_email[0].title))
+                # # for the sender’s email address
+                # print("From : ", rec_email.from_addr)
+                # # for the main content of the email
+                # print("\n\n", message)
+                # # for any type of attachment
+                # if rec_email.attachments:
+                #     print("Attachment : ", rec_email.attachments)
+                # print("Date: ", rec_email.date)
 
     def store_email(self,):
         pass
