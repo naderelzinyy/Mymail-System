@@ -123,7 +123,8 @@ class Email(ABC):
 
 class EmailAccountManager(Email):
     """
-    Stores the accounts of each user in the Database.
+    - Stores the accounts of each user in the Database.
+    - Views the accounts of each user
     """
     def __init__(self):
         self.__mail_client = None
@@ -176,15 +177,14 @@ class EmailAccountManager(Email):
             client_id = str(cursor.execute("SELECT client_id FROM clients WHERE client_name = ?", (self.domain_name,)).fetchone()).strip("('',)'")
             cursor.execute("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)", (self.email, self.password, user_id, client_id))
 
-    def view_accounts(self, username):
+    def get_user_accounts(self, username) -> list:
         db = db_file.Database()
         with db.database_connection() as cursor:
             user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone())\
                 .strip("('',)'")
             accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
-        print("\n\n\nYour email accounts : ")
-        for account in accounts:
-            print(accounts.index(account)+1, "- "+account[0])
+        return accounts
+        # print(accounts.index(account)+1, "- "+account[0])
 
 
 class EmailSender(Email):

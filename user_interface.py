@@ -12,7 +12,7 @@ class Interface:
         self.scenarios = {
             1: self.login.execute,
             2: self.register.execute,
-            3: self.account_manager.view_accounts,
+            3: self.account_manager.get_user_accounts,
             4: self.account_manager.login,
         }
 
@@ -28,12 +28,25 @@ class Interface:
             self.main_page()
 
     def main_page(self) -> None:
-        self.choice = int(input("3- view email clients \n4- add new email client \n"))
-        if self.choice == 3 or self.choice == 4:
-            self.scenarios.get(self.choice)(username = self.login.username)
+        self.choice = int(input("3- View email clients \n4- Add new email client \n5- Send an email \n6- Open inbox"))
+        if self.choice == 3:
+            self.view_accounts()
+        elif self.choice == 4:
+            self.scenarios.get(self.choice)(username=self.login.username)
+        elif self.choice == 5:
+            pass
         else:
             print("Choose 3 or 4")
             self.main_page()
+
+    def choose_mail_client_page(self):
+        pass
+
+    def view_accounts(self):
+        accounts = self.scenarios.get(self.choice)(username=self.login.username)
+        print("\n\n\nYour email accounts : ")
+        for account in accounts:
+            print(accounts.index(account)+1, "- "+account[0])
 
     def register_page(self):
         register = db_file.Register()
