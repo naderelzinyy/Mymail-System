@@ -3,7 +3,7 @@ import database as db_file
 import app as app_file
 
 
-class Interface:
+class AppInterface:
     def __init__(self):
         self.login = db_file.Login()
         self.register = db_file.Register()
@@ -44,30 +44,30 @@ class Interface:
             print("Wrong value.\nPlese choose again.")
             self.main_page()
 
-    def choose_mail_client_page(self):
+    def choose_mail_client_page(self) -> None:
         accounts = self.scenarios.get(3)(username=self.login.username)
         for account in accounts:
             print(accounts.index(account)+1, "- "+account[0])
         account_index = int(input("Choose an account : \n"))
         self.selected_account = accounts[account_index-1][0]
 
-    def send_execute(self):
+    def send_execute(self) -> None:
         self.choose_mail_client_page()
         self.email_sender.login(sender=self.selected_account)
         self.email_sender.send()
 
-    def receive_execute(self):
+    def receive_execute(self) -> None:
         self.choose_mail_client_page()
         self.email_receiver.login(receiver=self.selected_account)
         self.email_receiver.receive_unseen_emails()
 
-    def view_accounts(self):
+    def view_accounts(self) -> None:
         accounts = self.scenarios.get(self.choice)(username=self.login.username)
         print("\n\n\nYour email accounts : ")
         for account in accounts:
             print(accounts.index(account)+1, "- "+account[0])
 
-    def register_page(self):
+    def register_page(self) -> None:
         register = db_file.Register()
         register.execute()
 
@@ -76,5 +76,5 @@ class Interface:
 
 
 if __name__ == '__main__':
-    ui = Interface()
+    ui = AppInterface()
     ui.initial_page()

@@ -23,7 +23,7 @@ class MailClient:
         self.__connection_context = ssl.create_default_context()
 
     @contextmanager
-    def ssl_connection(self, email: str, password: str) -> None:
+    def ssl_connected(self, email: str, password: str) -> None:
         # Create a secure SSL context
         with smtp.SMTP_SSL(self.smtp_host, self.port, context=self.__connection_context) as mail_server:
             try:
@@ -39,7 +39,7 @@ class MailClient:
                 mail_server.close()
 
     @contextmanager
-    def tls_connection(self, email: str, password: str) -> None:
+    def tls_connected(self, email: str, password: str) -> None:
         try:
             server = smtp.SMTP(host=self.smtp_host, port=self.port)
             server.ehlo()
@@ -55,7 +55,7 @@ class MailClient:
             server.close()
 
     @contextmanager
-    def imap_connection(self, email: str, password: str):
+    def imap_connected(self, email: str, password: str) -> None:
         try:
             server = imap.connect(self.imap_host, email, password)
             yield server
@@ -125,8 +125,9 @@ class Email(ABC):
         pass
 
     @abstractmethod
-    def __html_to_text(self, message: str) -> str:
+    def _html_to_text(self, message: str) -> str:
         pass
+
 
 class EmailAccountManager(Email):
     """
@@ -141,32 +142,32 @@ class EmailAccountManager(Email):
         self.domain_name = None
         self.account_valid = False
 
-    def set_email(self):
+    def set_email(self) -> None:
         self.email = str(input("Enter Email : "))
 
-    def set_password(self):
+    def set_password(self) -> None:
         self.password = str(input("Enter password : "))
 
-    def set_domain_name(self):
+    def set_domain_name(self) -> str:
         domain = re.search("[@-][\w]+", self.email).group()
         self.domain_name = domain[1:]
         return self.domain_name
 
-    def set_mail_client(self):
+    def set_mail_client(self) -> None:
         selected_mail_client = self.set_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
-    def set_credentials(self):
+    def set_credentials(self) -> None:
         self.set_email()
         self.set_password()
 
-    def login(self, username=None):
+    def login(self, username=None) -> None:
         """
         Checks if the credentials are valid or not.
         """
         self.set_credentials()
         self.set_mail_client()
-        mail_client_connection = self.__mail_client().ssl_connection
+        mail_client_connection = self.__mail_client().ssl_connected
         try:
             with mail_client_connection(self.email, self.password) as server:
                 pass
@@ -178,7 +179,7 @@ class EmailAccountManager(Email):
             print("Account authenticated !")
             self.__store_account_credentials(username=username)
 
-    def __store_account_credentials(self, username):
+    def __store_account_credentials(self, username) -> None:
         db = db_file.Database()
         with db.database_connection() as cursor:
             user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
@@ -196,11 +197,12 @@ class EmailAccountManager(Email):
             accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
         return accounts
 
-    def store_emails(self):
+    def store_emails(self) -> None:
         pass
 
-    def __html_to_text(self, message: str) -> str:
+    def _html_to_text(self, message: str) -> str:
         pass
+
 
 class EmailSender(Email):
     def __init__(self):
@@ -240,7 +242,7 @@ class EmailSender(Email):
     def set_message(self) -> None:
         message = str(input("Enter email content: "))
         self.__message = self.__message.format(message)
-        self.__message = self.__html_to_text(self.__message)
+        self.__message = self._html_to_text(self.__message)
 
     def set_attachment(self) -> MIMEBase:
 
@@ -270,19 +272,19 @@ class EmailSender(Email):
         domain_name = domain[1:]
         return domain_name
 
-    def __html_to_text(self, message: str) -> str:
+    def _html_to_text(self, message: str) -> str:
         message = bs(message, "html.parser").get_text("\n")
         return message
 
-    def set_mail_client(self):
+    def set_mail_client(self) -> None:
 
         selected_mail_client = self.set_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
     def __send_execute(self) -> None:
-        mail_client_connection = self.__mail_client().ssl_connection
+        mail_client_connection = self.__mail_client().ssl_connected
         if self.__mail_client == OutlookClient:
-            mail_client_connection = self.__mail_client().tls_connection
+            mail_client_connection = self.__mail_client().tls_connected
 
         with mail_client_connection(self.__from, self.__password) as connection:
             try:
@@ -311,7 +313,7 @@ class EmailSender(Email):
         self.set_message()
         self.__send_execute()
 
-    def store_emails(self):
+    def store_emails(self) -> None:
         db = db_file.Database()
         date_sent = str(datetime.now()) + str(datetime.today())
         with db.database_connection() as cursor:
@@ -331,22 +333,22 @@ class EmailReceiver(Email):
         self.__mail_client = None
         self.rec_emails = []
 
-    def set_email(self, receiver):
+    def set_email(self, receiver) -> None:
         self.__email = receiver
 
-    def set_password(self, password=None):
+    def set_password(self, password=None) -> None:
         self.__password = password
 
-    def set_domain_name(self):
+    def set_domain_name(self) -> str:
         domain = re.search("[@-][\w]+", self.__email).group()
         domain_name = domain[1:]
         return domain_name
 
-    def set_mail_client(self):
+    def set_mail_client(self) -> None:
         selected_mail_client = self.set_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
-    def login(self, receiver=None):
+    def login(self, receiver=None) -> None:
 
         db = db_file.Database()
         with db.database_connection() as cursor:
@@ -356,12 +358,12 @@ class EmailReceiver(Email):
         self.set_password(password=password)
         self.set_mail_client()
 
-    def __html_to_text(self, message: str) -> str:
+    def _html_to_text(self, message: str) -> str:
         message = bs(message, "html.parser").get_text("\n")
         return message
 
     def receive_unseen_emails(self) -> None:
-        mail_client_connection = self.__mail_client().imap_connection
+        mail_client_connection = self.__mail_client().imap_connected
         with mail_client_connection(self.__email, self.__password) as connection:
             self.rec_emails = list(connection.unseen())
             if self.rec_emails:
@@ -383,25 +385,25 @@ class EmailReceiver(Email):
                 #     print("Attachment : ", rec_email.attachments)
                 # print("Date: ", rec_email.date)
 
-    def store_emails(self):
+    def store_emails(self) -> None:
         db = db_file.Database()
         with db.database_connection() as cursor:
             account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
                                                 (self.__email,)).fetchone()).strip("('',)'"))
             for mail in self.rec_emails:
-                message = self.__html_to_text(mail.body)
+                message = self._html_to_text(mail.body)
                 stored_email = [mail.from_addr, mail.to, message, mail.title, mail.date, account_id, "received"]
                 cursor.executemany(
                     "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
                     " values (?,?,?,?,?,?,?) ", [stored_email])
 
-
-if __name__ == '__main__':
-    try:
-        email = EmailAccountManager()
-        email.login()
-        # email.receive()
-    except RuntimeError as e:
-        print(e)
-    else:
-        print('Done!')
+#
+# if __name__ == '__main__':
+#     try:
+#         email = EmailAccountManager()
+#         email.login()
+#         # email.receive()
+#     except RuntimeError as e:
+#         print(e)
+#     else:
+#         print('Done!')
