@@ -1,6 +1,8 @@
 
 import database as db_file
 import app as app_file
+from termcolor import colored
+from pyfiglet import Figlet
 
 
 class AppInterface:
@@ -13,26 +15,41 @@ class AppInterface:
         self.choice = None
         self.selected_account = None
         self.scenarios = {
-            "1": self.login.execute,
-            "2": self.register.execute,
             "3": self.account_manager.get_user_accounts,
             "4": self.account_manager.login,
             "5": self.send_execute,
             "6": self.receive_execute,
         }
 
+        self.commands = {
+            "1": self.login.execute,
+            "2": self.register.execute,
+            "send": self.send_execute,
+            "inbox": self.receive_execute,
+            "add acc": self.account_manager.login,
+            "logout": self.initial_page,
+            "quit": self.exit_app
+        }
+        self.cmd = None
+
     def initial_page(self) -> None:
-        self.choice = str(input("1- Sign in \n2- Register \n"))
-        if self.choice == "1" or self.choice == "2":
-            self.scenarios.get(self.choice)()
+
+        self.cmd = str(input("1- Sign in \n2- Register \n"))
+        if self.cmd == "1" or self.cmd == "2":
+            self.commands.get(self.cmd)()
+        elif self.choice == "quit":
+            self.commands.get("quit")()
         else:
             print("Choose 1 or 2")
             self.initial_page()
 
-        if self.login.role.get('user'):
-            self.main_page()
+    def welcome_page(self):
+        welcome_text = Figlet(font="starwars")
+        print(colored(welcome_text.renderText('MY     MAIL     SYSTEM'), 'green'))
 
     def main_page(self) -> None:
+        self.view_accounts()
+        print("\n")
         self.choice = str(input("3- View email clients \n4- Add new email client \n5- Send an email \n6- Open inbox \n"))
         if self.choice == "3":
             self.view_accounts()
@@ -41,7 +58,7 @@ class AppInterface:
         elif self.choice == "5" or self.choice == "6":
             self.scenarios.get(self.choice)()
         else:
-            print("Wrong value.\nPlese choose again.")
+            print("Wrong value.\nPlease choose again.")
             self.main_page()
 
     def choose_mail_client_page(self) -> None:
@@ -62,19 +79,35 @@ class AppInterface:
         self.email_receiver.receive_unseen_emails()
 
     def view_accounts(self) -> None:
-        accounts = self.scenarios.get(self.choice)(username=self.login.username)
+        accounts = self.scenarios.get("3")(username=self.login.username)
         print("\n\n\nYour email accounts : ")
+        status = "No new emails"
         for account in accounts:
-            print(accounts.index(account)+1, "- "+account[0])
+            emails_number = self.email_receiver.get_unseen_emails_number(account[0])
+            if emails_number > 0:
+                status = "{} new emails".format(emails_number)
+            print(accounts.index(account)+1, "- "+account[0], " || ", status)
 
-    def register_page(self) -> None:
+    @staticmethod
+    def register_page() -> None:
         register = db_file.Register()
         register.execute()
 
+    @staticmethod
+    def exit_app():
+        print("Thanks for using our app")
+        exit()
+
     def router(self) -> None:
-        pass
+        self.welcome_page()
+        self.initial_page()
+        self.view_accounts()
+        while True:
+            self.cmd = str(input("-- "))
+            if self.cmd in self.commands:
+                self.commands.get(self.cmd)()
 
 
 if __name__ == '__main__':
     ui = AppInterface()
-    ui.initial_page()
+    ui.router()

@@ -33,8 +33,6 @@ class MailClient:
 
             except smtp.SMTPAuthenticationError:
                 print("Username and Password not accepted")
-            else:
-                print('Connection successfully established')
             finally:
                 mail_server.close()
 
@@ -49,20 +47,16 @@ class MailClient:
             yield server
         except Exception as e:
             print(e)
-        else:
-            print('Connection successfully established')
         finally:
             server.close()
 
     @contextmanager
-    def imap_connected(self, email: str, password: str) -> None:
+    def imap_connected(self, email: str, password: str, read_only=False) -> None:
         try:
-            server = imap.connect(self.imap_host, email, password)
+            server = imap.connect(self.imap_host, email, password, ssl=True, port=993, read_only=read_only)
             yield server
         except Exception as e:
             print(e)
-        else:
-            print('Connection successfully established')
         finally:
             server.quit()
 
@@ -169,10 +163,10 @@ class EmailAccountManager(Email):
         self.set_mail_client()
         mail_client_connection = self.__mail_client().ssl_connected
         try:
-            with mail_client_connection(self.email, self.password) as server:
+            with mail_client_connection(self.email, self.password):
                 pass
-        except:
-            print("Please try again")
+        except smtp.SMTPAuthenticationError:
+            print("Wrong email or password!")
             self.login()
         else:
             self.account_valid = True
@@ -331,7 +325,7 @@ class EmailReceiver(Email):
         self.__email = None
         self.__password = None
         self.__mail_client = None
-        self.rec_emails = []
+        self.received_emails = []
 
     def set_email(self, receiver) -> None:
         self.__email = receiver
@@ -365,11 +359,11 @@ class EmailReceiver(Email):
     def receive_unseen_emails(self) -> None:
         mail_client_connection = self.__mail_client().imap_connected
         with mail_client_connection(self.__email, self.__password) as connection:
-            self.rec_emails = list(connection.unseen())
-            if self.rec_emails:
+            self.received_emails = list(connection.unseen())
+            if self.received_emails:
                 self.store_emails()
-                for mail in self.rec_emails:
-                    print(self.rec_emails.index(mail) + 1, "- From : " + mail.from_addr, "|| ", mail.title)
+                for mail in self.received_emails:
+                    print(self.received_emails.index(mail) + 1, "- From : " + mail.from_addr, "|| ", mail.title)
             else:
                 print("No new emails !")
                 # # Converting html to text function
@@ -385,25 +379,25 @@ class EmailReceiver(Email):
                 #     print("Attachment : ", rec_email.attachments)
                 # print("Date: ", rec_email.date)
 
+    def get_unseen_emails_number(self, email) -> int:
+        db = db_file.Database()
+        with db.database_connection() as cursor:
+            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (email,)).fetchone()).strip("('',)'")
+        self.login(email)
+        mail_client_connection = self.__mail_client().imap_connected
+        with mail_client_connection(email, password, read_only=True) as connection:
+            emails = list(connection.unseen())
+
+        return len(emails)
+
     def store_emails(self) -> None:
         db = db_file.Database()
         with db.database_connection() as cursor:
             account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
                                                 (self.__email,)).fetchone()).strip("('',)'"))
-            for mail in self.rec_emails:
+            for mail in self.received_emails:
                 message = self._html_to_text(mail.body)
                 stored_email = [mail.from_addr, mail.to, message, mail.title, mail.date, account_id, "received"]
                 cursor.executemany(
                     "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
                     " values (?,?,?,?,?,?,?) ", [stored_email])
-
-#
-# if __name__ == '__main__':
-#     try:
-#         email = EmailAccountManager()
-#         email.login()
-#         # email.receive()
-#     except RuntimeError as e:
-#         print(e)
-#     else:
-#         print('Done!')
