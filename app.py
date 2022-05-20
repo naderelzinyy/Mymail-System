@@ -46,7 +46,7 @@ class MailClient:
             server.login(email, password)
             yield server
         except Exception as e:
-            print(e)
+            print("Authentication unsuccessful!")
         finally:
             server.close()
 
@@ -162,6 +162,9 @@ class EmailAccountManager(Email):
         self.set_credentials()
         self.set_mail_client()
         mail_client_connection = self.__mail_client().ssl_connected
+        if self.__mail_client == OutlookClient:
+            mail_client_connection = self.__mail_client().tls_connected
+
         try:
             with mail_client_connection(self.email, self.password):
                 pass
