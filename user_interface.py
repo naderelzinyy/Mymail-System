@@ -13,9 +13,10 @@ class AppInterface:
         self.email_sender = app_file.EmailSender()
         self.email_receiver = app_file.EmailReceiver()
         self.selected_account = None
+        self.cmd = None
         self.commands = {
             "1": self.login.execute,
-            "2": self.register.execute,
+            "2": self.register_page,
             "3": self.account_manager.get_user_accounts,
             "send": self.send_execute,
             "inbox": self.receive_execute,
@@ -24,7 +25,6 @@ class AppInterface:
             "help": self.help,
             "quit": self.exit_app
         }
-        self.cmd = None
 
     def initial_page(self) -> None:
 
@@ -39,11 +39,6 @@ class AppInterface:
 
         if self.login.role.get('user'):
             self.view_accounts()
-
-    @staticmethod
-    def welcome_page() -> None:
-        welcome_text = Figlet(font="starwars")
-        print(colored(welcome_text.renderText('MY     MAIL     SYSTEM'), 'green'))
 
     def choose_mail_account_page(self) -> None:
         accounts = self.commands.get("3")(username=self.login.username)
@@ -77,9 +72,20 @@ class AppInterface:
         print("send -> sends an email\ninbox -> opens the inbox\nadd acc -> adds an email account\nlogout -> logs the user out\nquit -> closes the app")
 
     @staticmethod
-    def register_page() -> None:
+    def welcome_page() -> None:
+        welcome_text = Figlet(font="starwars")
+        print(colored(welcome_text.renderText('MY     MAIL     SYSTEM'), 'green'))
+        print("Enter help to list commands.")
+
+    def register_page(self) -> None:
         register = db_file.Register()
-        register.execute()
+        try:
+            register.execute()
+        except Exception:
+            print("Something went wrong please try again")
+            self.register_page()
+        else:
+            self.initial_page()
 
     @staticmethod
     def exit_app() -> None:
