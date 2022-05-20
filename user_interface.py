@@ -28,6 +28,7 @@ class AppInterface:
             "inbox": self.receive_execute,
             "add acc": self.account_manager.login,
             "logout": self.initial_page,
+            "help": self.help,
             "quit": self.exit_app
         }
         self.cmd = None
@@ -42,6 +43,9 @@ class AppInterface:
         else:
             print("Choose 1 or 2")
             self.initial_page()
+
+        if self.login.role.get('user'):
+            self.view_accounts()
 
     @staticmethod
     def welcome_page():
@@ -90,6 +94,10 @@ class AppInterface:
             print(accounts.index(account)+1, "- "+account[0], " || ", status)
 
     @staticmethod
+    def help():
+        print("send -> sends an email\ninbox -> opens the inbox\nadd acc -> adds an email account\nlogout -> logs the user out\nquit -> closes the app")
+
+    @staticmethod
     def register_page() -> None:
         register = db_file.Register()
         register.execute()
@@ -102,7 +110,6 @@ class AppInterface:
     def router(self) -> None:
         self.welcome_page()
         self.initial_page()
-        self.view_accounts()
         while True:
             self.cmd = str(input("-- "))
             if self.cmd == "add acc":
