@@ -95,6 +95,8 @@ class AppInterface:
                 self.commands.get(self.cmd)(username=self.login.username)
             elif self.cmd in self.commands:
                 self.commands.get(self.cmd)()
+            elif self.cmd == "1" or self.cmd == "2" or self.cmd == "3":
+                print("Wrong command, Enter help to list commands.")
             else:
                 print("Wrong command, Enter help to list commands.")
 
