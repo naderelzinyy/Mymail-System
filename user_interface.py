@@ -105,8 +105,12 @@ class AppInterface:
         self.view_accounts()
         while True:
             self.cmd = str(input("-- "))
-            if self.cmd in self.commands:
+            if self.cmd == "add acc":
+                self.commands.get(self.cmd)(username=self.login.username)
+            elif self.cmd in self.commands:
                 self.commands.get(self.cmd)()
+            else:
+                print("Wrong command, Enter help to list commands.")
 
 
 if __name__ == '__main__':
