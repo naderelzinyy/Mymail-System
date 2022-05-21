@@ -66,6 +66,11 @@ class OutlookClient(MailClient):
         super().__init__(port=587, smtp_host="smtp.office365.com", imap_host="imap-mail.outlook.com")
 
 
+class IcloudClient(MailClient):
+    def __init__(self):
+        super().__init__(port=587, smtp_host="smtp.mail.me.com", imap_host="imap.mail.me.com")
+
+
 class YahooMailClient(MailClient):
     pass
 
@@ -95,7 +100,8 @@ class Email(ABC):
         'hotmail': OutlookClient,
         'yahoo': YahooMailClient,
         'gmail': GmailClient,
-        'yandex': YandexClient
+        'yandex': YandexClient,
+        'icloud': IcloudClient,
     }
 
     @abstractmethod
@@ -162,7 +168,7 @@ class EmailAccountManager(Email):
         self.set_credentials()
         self.set_mail_client()
         mail_client_connection = self.__mail_client().ssl_connected
-        if self.__mail_client == OutlookClient:
+        if self.__mail_client == OutlookClient or self.__mail_client == IcloudClient:
             mail_client_connection = self.__mail_client().tls_connected
 
         try:
@@ -280,7 +286,7 @@ class EmailSender(Email):
 
     def __send_execute(self) -> None:
         mail_client_connection = self.__mail_client().ssl_connected
-        if self.__mail_client == OutlookClient:
+        if self.__mail_client == OutlookClient or self.__mail_client == IcloudClient:
             mail_client_connection = self.__mail_client().tls_connected
 
         with mail_client_connection(self.__from, self.__password) as connection:
