@@ -1,18 +1,20 @@
-import smtplib as smtp
-import ssl
-import getpass
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-from contextlib import contextmanager
 import re
-from tkinter import filedialog
+import ssl
+# import getpass
+import smtplib as smtp
 import easyimap as imap
-from abc import ABC, abstractmethod
-from datetime import datetime, date
+
 import database as db_file
+
+from email import encoders
+from datetime import datetime
+from tkinter import filedialog
 from bs4 import BeautifulSoup as bs
+from abc import ABC, abstractmethod
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from contextlib import contextmanager
+from email.mime.multipart import MIMEMultipart
 
 
 class MailClient:
