@@ -1,7 +1,7 @@
 import re
 
 import database as db_file
-import mail_clients as mail_clients
+import email_clients as mail_clients
 
 from email import encoders
 from termcolor import colored

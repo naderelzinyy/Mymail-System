@@ -1,5 +1,6 @@
 
 import database as db_file
+import user_session as user_session
 import email_handler as email_handler
 
 from pyfiglet import Figlet
@@ -8,8 +9,8 @@ from termcolor import colored
 
 class AppInterface:
     def __init__(self):
-        self.login = db_file.Login()
-        self.register = db_file.Register()
+        self.login = user_session.Login()
+        self.register = user_session.Register()
         self.account_manager = email_handler.EmailAccountManager()
         self.email_sender = email_handler.EmailSender()
         self.email_receiver = email_handler.EmailReceiver()
