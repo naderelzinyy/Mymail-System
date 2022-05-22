@@ -59,11 +59,12 @@ class AppInterface:
     def view_accounts(self) -> None:
         accounts = self.commands.get("3")(username=self.login.username)
         print("\n\n\nYour email accounts : ")
-        status = "No new emails"
         for account in accounts:
             emails_number = self.email_receiver.get_unseen_emails_number(account[0])
             if emails_number > 0:
                 status = "{} new emails".format(emails_number)
+            else:
+                status = "No new emails"
             print(accounts.index(account)+1, "- "+account[0], " || ", status)
 
     @staticmethod
