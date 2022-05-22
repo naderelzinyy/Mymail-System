@@ -4,6 +4,7 @@ import database as db_file
 import mail_clients as mail_clients
 
 from email import encoders
+from termcolor import colored
 from datetime import datetime
 from tkinter import filedialog
 from abc import ABC, abstractmethod
@@ -11,6 +12,7 @@ from bs4 import BeautifulSoup as bs
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
 
 
 class Email(ABC):
@@ -203,6 +205,7 @@ class EmailSender(Email):
 
         with mail_client_connection(self.__from, self.__password) as connection:
             connection.sendmail(self.__from, self.__to, self.__mail_init().as_string())
+            print(colored("Email successfully sent.", 'green'))
             self.store_emails()
 
     def login(self, sender=None) -> None:
