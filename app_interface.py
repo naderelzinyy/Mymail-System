@@ -1,6 +1,6 @@
 
-import email_handler as email_handler
 import database as db_file
+import email_handler as email_handler
 
 from pyfiglet import Figlet
 from termcolor import colored
@@ -21,6 +21,7 @@ class AppInterface:
             "3": self.account_manager.get_user_accounts,
             "send": self.send_execute,
             "inbox": self.receive_execute,
+            "view accounts": self.view_accounts,
             "add acc": self.account_manager.login,
             "logout": self.initial_page,
             "help": self.help,
