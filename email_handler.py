@@ -14,7 +14,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-
 class Email(ABC):
     mail_clients = {
         'outlook': mail_clients.OutlookClient,
@@ -26,7 +25,7 @@ class Email(ABC):
     }
 
     @abstractmethod
-    def set_domain_name(self):
+    def get_domain_name(self):
         pass
 
     @abstractmethod
@@ -69,13 +68,13 @@ class EmailAccountManager(Email):
     def set_password(self) -> None:
         self.password = str(input("Enter password : "))
 
-    def set_domain_name(self) -> str:
+    def get_domain_name(self) -> str:
         domain = re.search("[@-][\w]+", self.email).group()
         self.domain_name = domain[1:]
         return self.domain_name
 
     def set_mail_client(self) -> None:
-        selected_mail_client = self.set_domain_name()
+        selected_mail_client = self.get_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
     def set_credentials(self) -> None:
@@ -185,7 +184,7 @@ class EmailSender(Email):
             mail_content.attach(self.set_attachment())
         return mail_content
 
-    def set_domain_name(self) -> str:
+    def get_domain_name(self) -> str:
         domain = re.search("[@-][\w]+", self.__from).group()
         domain_name = domain[1:]
         return domain_name
@@ -195,7 +194,7 @@ class EmailSender(Email):
         return message
 
     def set_mail_client(self) -> None:
-        selected_mail_client = self.set_domain_name()
+        selected_mail_client = self.get_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
     def __send_execute(self) -> None:
@@ -253,13 +252,13 @@ class EmailReceiver(Email):
     def set_password(self, password=None) -> None:
         self.__password = password
 
-    def set_domain_name(self) -> str:
+    def get_domain_name(self) -> str:
         domain = re.search("[@-][\w]+", self.__email).group()
         domain_name = domain[1:]
         return domain_name
 
     def set_mail_client(self) -> None:
-        selected_mail_client = self.set_domain_name()
+        selected_mail_client = self.get_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
     def login(self, receiver=None) -> None:
