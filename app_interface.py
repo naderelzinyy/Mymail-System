@@ -1,5 +1,5 @@
 
-import app as app_file
+import email_handler as email_handler
 import database as db_file
 
 from pyfiglet import Figlet
@@ -10,13 +10,13 @@ class AppInterface:
     def __init__(self):
         self.login = db_file.Login()
         self.register = db_file.Register()
-        self.account_manager = app_file.EmailAccountManager()
-        self.email_sender = app_file.EmailSender()
-        self.email_receiver = app_file.EmailReceiver()
+        self.account_manager = email_handler.EmailAccountManager()
+        self.email_sender = email_handler.EmailSender()
+        self.email_receiver = email_handler.EmailReceiver()
         self.selected_account = None
         self.cmd = None
         self.commands = {
-            "1": self.login.start,
+            "1": self.login.execute,
             "2": self.register_page,
             "3": self.account_manager.get_user_accounts,
             "send": self.send_execute,
@@ -78,7 +78,7 @@ class AppInterface:
     def register_page(self) -> None:
         register = db_file.Register()
         try:
-            register.start()
+            register.execute()
         except Exception as e:
             print("Something went wrong please try again")
             print(f"{e.__class__ = }")

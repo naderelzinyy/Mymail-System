@@ -26,14 +26,14 @@ class Database:
             if data is not None:
                 cursor.executemany(query, data)
             else:
-                cursor.start(query)
+                cursor.execute(query)
 
     def returnable_execute(self, query: str, iteratable: bool, data=None):
         with self.database_connected() as cursor:
             if iteratable:
-                result = [row for row in cursor.start(query)]
+                result = [row for row in cursor.execute(query)]
                 return result
-            result = cursor.start(query, (data,))
+            result = cursor.execute(query, (data,))
         return result
 
 
@@ -67,7 +67,7 @@ class UserSession(ABC):
         pass
 
     @abstractmethod
-    def start(self):
+    def execute(self):
         pass
 
 
@@ -126,7 +126,7 @@ class Register(UserSession):
         else:
             print('Successfully registered!')
 
-    def start(self) -> None:
+    def execute(self) -> None:
         self._set_name()
         self._set_username()
         self._set_email()
@@ -172,28 +172,28 @@ class Login(UserSession):
 
     def _set_name(self) -> None:
         with self.__db.database_connected() as cursor:
-            self.first_name = str(cursor.start("SELECT first_name FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
-            self.last_name = str(cursor.start("SELECT last_name FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+            self.first_name = str(cursor.execute("SELECT first_name FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+            self.last_name = str(cursor.execute("SELECT last_name FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
 
     def _set_email(self) -> None:
         with self.__db.database_connected() as cursor:
-            self.email = str(cursor.start("SELECT email FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+            self.email = str(cursor.execute("SELECT email FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
 
     def _set_date_of_birth(self) -> None:
         with self.__db.database_connected() as cursor:
-            self.dob = str(cursor.start("SELECT date(dob) FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
+            self.dob = str(cursor.execute("SELECT date(dob) FROM user WHERE username = ?", (self.username,)).fetchone()).strip("('',)'")
 
     def __authenticate(self, username: str, password: str) -> bool:
         # pwd = db.returnable_execute(f"SELECT password FROM user WHERE username = ?", data=username, iteratable=False)
         with self.__db.database_connected() as cursor:
-            pwd = str(cursor.start("SELECT password FROM user WHERE username = ?", (username,)).fetchone()).strip("('',)'")
+            pwd = str(cursor.execute("SELECT password FROM user WHERE username = ?", (username,)).fetchone()).strip("('',)'")
             return pwd == password
 
-    def start(self) -> None:
+    def execute(self) -> None:
         self.__set_login_credentials()
         if self.role.get('user'):
             self._set_name()
             self._set_email()
             self._set_date_of_birth()
         else:
-            self.start()
+            self.execute()

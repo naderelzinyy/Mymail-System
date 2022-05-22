@@ -1,113 +1,26 @@
 import re
-import ssl
-# import getpass
-import smtplib as smtp
-import easyimap as imap
 
 import database as db_file
+import mail_clients as mail_clients
 
 from email import encoders
 from datetime import datetime
 from tkinter import filedialog
-from bs4 import BeautifulSoup as bs
 from abc import ABC, abstractmethod
-from email.mime.text import MIMEText
+from bs4 import BeautifulSoup as bs
 from email.mime.base import MIMEBase
-from contextlib import contextmanager
+from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
-
-class MailClient:
-    def __init__(self, port: int, smtp_host: str, imap_host: str):
-        self.port = port  # SSL Port
-        self.smtp_host = smtp_host
-        self.imap_host = imap_host
-        self.__connection_context = ssl.create_default_context()
-
-    @contextmanager
-    def ssl_connected(self, email: str, password: str, action=lambda: None) -> None:
-        # Create a secure SSL context
-        with smtp.SMTP_SSL(self.smtp_host, self.port, context=self.__connection_context) as mail_server:
-            try:
-                # mail_server.connect(email, self.port)
-                mail_server.login(email, password)
-                yield mail_server
-            except RuntimeError("generator didn't yield"):
-                pass
-            except smtp.SMTPAuthenticationError:
-                print("Username and Password not accepted")
-                action()
-            finally:
-                mail_server.close()
-
-    @contextmanager
-    def tls_connected(self, email: str, password: str, action=lambda: None) -> None:
-        try:
-            server = smtp.SMTP(host=self.smtp_host, port=self.port)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(email, password)
-            yield server
-        except Exception as e:
-            print("Authentication unsuccessful!")
-            action()
-        finally:
-            server.close()
-
-    @contextmanager
-    def imap_connected(self, email: str, password: str, read_only=False, action=lambda: None) -> None:
-        try:
-            server = imap.connect(self.imap_host, email, password, ssl=True, port=993, read_only=read_only)
-            yield server
-        except Exception as e:
-            print(e)
-            action()
-        finally:
-            server.quit()
-
-
-class OutlookClient(MailClient):
-    def __init__(self):
-        super().__init__(port=587, smtp_host="smtp.office365.com", imap_host="imap-mail.outlook.com")
-
-
-class IcloudClient(MailClient):
-    def __init__(self):
-        super().__init__(port=587, smtp_host="smtp.mail.me.com", imap_host="imap.mail.me.com")
-
-
-class YahooMailClient(MailClient):
-    pass
-
-
-class GmailClient(MailClient):
-    def __init__(self):
-        super().__init__(port=465, smtp_host="smtp.gmail.com", imap_host="imap.gmail.com")
-
-
-class YandexClient(MailClient):
-    """
-        Yandex user must generate a new password for the SMTP Connection.
-        1- Go to (https://passport.yandex.com/profile).
-        2- Click on "Passwords and authorization".
-        3- Click on "Create new password" under "App passwords".
-        4- Select "Email" and choose a name for your password.
-        5- Copy the generated password and use it for logging in through Mymail.
-    """
-
-    def __init__(self):
-        super().__init__(port=465, smtp_host="smtp.yandex.com", imap_host="imap.yandex.com")
 
 
 class Email(ABC):
     mail_clients = {
-        'outlook': OutlookClient,
-        'hotmail': OutlookClient,
-        'yahoo': YahooMailClient,
-        'gmail': GmailClient,
-        'yandex': YandexClient,
-        'icloud': IcloudClient,
+        'outlook': mail_clients.OutlookClient,
+        'hotmail': mail_clients.OutlookClient,
+        'yahoo': mail_clients.YahooMailClient,
+        'gmail': mail_clients.GmailClient,
+        'yandex': mail_clients.YandexClient,
+        'icloud': mail_clients.IcloudClient,
     }
 
     @abstractmethod
@@ -174,7 +87,7 @@ class EmailAccountManager(Email):
         self.set_credentials()
         self.set_mail_client()
         mail_client_connection = self.__mail_client().ssl_connected
-        tls_clients = [OutlookClient, IcloudClient]
+        tls_clients = [mail_clients.OutlookClient, mail_clients.IcloudClient]
         if self.__mail_client in tls_clients:
             mail_client_connection = self.__mail_client().tls_connected
 
@@ -186,20 +99,20 @@ class EmailAccountManager(Email):
     def __store_account_credentials(self, username) -> None:
         db = db_file.Database()
         with db.database_connected() as cursor:
-            user_id = str(cursor.start("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
+            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
                 "('',)'")
-            client_id = str(cursor.start("SELECT client_id FROM clients WHERE client_name = ?",
-                                         (self.domain_name,)).fetchone()).strip("('',)'")
-            cursor.start("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)",
-                         (self.email, self.password, user_id, client_id))
+            client_id = str(cursor.execute("SELECT client_id FROM clients WHERE client_name = ?",
+                                           (self.domain_name,)).fetchone()).strip("('',)'")
+            cursor.execute("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)",
+                           (self.email, self.password, user_id, client_id))
 
     @staticmethod
     def get_user_accounts(username) -> list:
         db = db_file.Database()
         with db.database_connected() as cursor:
-            user_id = str(cursor.start("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()) \
+            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()) \
                 .strip("('',)'")
-            accounts = [row for row in cursor.start("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
+            accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
         return accounts
 
     def store_emails(self) -> None:
@@ -285,7 +198,7 @@ class EmailSender(Email):
 
     def __send_execute(self) -> None:
         mail_client_connection = self.__mail_client().ssl_connected
-        if self.__mail_client == OutlookClient or self.__mail_client == IcloudClient:
+        if self.__mail_client == mail_clients.OutlookClient or self.__mail_client == mail_clients.IcloudClient:
             mail_client_connection = self.__mail_client().tls_connected
 
         with mail_client_connection(self.__from, self.__password) as connection:
@@ -299,7 +212,7 @@ class EmailSender(Email):
 
         with db.database_connected() as cursor:
             password = str(
-                cursor.start("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip(
+                cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip(
                 "('',)'")
         self.set_sender(sender)
         self.set_password(password=password)
@@ -315,8 +228,8 @@ class EmailSender(Email):
         db = db_file.Database()
         date_sent = str(datetime.now()) + str(datetime.today())
         with db.database_connected() as cursor:
-            account_id = int(str(cursor.start("SELECT account_id FROM user_accounts WHERE email = ?",
-                                              (self.__from,)).fetchone()).strip("('',)'"))
+            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
+                                                (self.__from,)).fetchone()).strip("('',)'"))
             stored_email = [self.__from, self.__to, self.__message, self.__subject, date_sent, account_id, "sent"]
             cursor.executemany(
                 "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
@@ -349,8 +262,8 @@ class EmailReceiver(Email):
     def login(self, receiver=None) -> None:
         db = db_file.Database()
         with db.database_connected() as cursor:
-            password = str(cursor.start("SELECT email_password FROM user_accounts WHERE email = ?",
-                                        (receiver,)).fetchone()).strip("('',)'")
+            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?",
+                                          (receiver,)).fetchone()).strip("('',)'")
         self.set_email(receiver)
         self.set_password(password=password)
         self.set_mail_client()
@@ -386,7 +299,7 @@ class EmailReceiver(Email):
         db = db_file.Database()
         with db.database_connected() as cursor:
             password = str(
-                cursor.start("SELECT email_password FROM user_accounts WHERE email = ?", (email,)).fetchone()).strip(
+                cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (email,)).fetchone()).strip(
                 "('',)'")
         self.login(email)
         mail_client_connection = self.__mail_client().imap_connected
@@ -397,8 +310,8 @@ class EmailReceiver(Email):
     def store_emails(self) -> None:
         db = db_file.Database()
         with db.database_connected() as cursor:
-            account_id = int(str(cursor.start("SELECT account_id FROM user_accounts WHERE email = ?",
-                                              (self.__email,)).fetchone()).strip("('',)'"))
+            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
+                                                (self.__email,)).fetchone()).strip("('',)'"))
             for mail in self.received_emails:
                 message = self._html_to_text(mail.body)
                 stored_email = [mail.from_addr, mail.to, message, mail.title, mail.date, account_id, "received"]
