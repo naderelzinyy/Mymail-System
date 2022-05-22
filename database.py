@@ -100,7 +100,15 @@ class Register(UserSession):
             self._set_email()
 
     def _set_date_of_birth(self) -> None:
-        self.dob = str(input("Enter date of birth: "))
+        print("Enter date of birth")
+        day = str(input("Day: "))
+        if int(day) < 10:
+            day = str("0"+str(day))
+        month = str(input("month: "))
+        if int(month) < 10:
+            month = str("0"+str(month))
+        year = str(input("year: "))
+        self.dob = str(year+"-"+month+"-"+day+" 00:00:00")
 
     def _username_check(self, username) -> bool:
         usernames = [row[0] for row in self.db.returnable_execute("SELECT username FROM user", iteratable=True)]
