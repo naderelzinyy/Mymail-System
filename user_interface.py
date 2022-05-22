@@ -15,7 +15,7 @@ class AppInterface:
         self.selected_account = None
         self.cmd = None
         self.commands = {
-            "1": self.login.execute,
+            "1": self.login.start,
             "2": self.register_page,
             "3": self.account_manager.get_user_accounts,
             "send": self.send_execute,
@@ -27,12 +27,9 @@ class AppInterface:
         }
 
     def initial_page(self) -> None:
-
         self.cmd = str(input("1- Sign in \n2- Register \n"))
-        if self.cmd == "1" or self.cmd == "2":
+        if self.cmd in ["1", "2", "quit"]:
             self.commands.get(self.cmd)()
-        elif self.cmd == "quit":
-            self.commands.get("quit")()
         else:
             print("Choose 1 or 2")
             self.initial_page()
@@ -80,9 +77,10 @@ class AppInterface:
     def register_page(self) -> None:
         register = db_file.Register()
         try:
-            register.execute()
-        except Exception:
+            register.start()
+        except Exception as e:
             print("Something went wrong please try again")
+            print(f"{e.__class__ = }")
             self.register_page()
         else:
             self.initial_page()
@@ -90,7 +88,7 @@ class AppInterface:
     @staticmethod
     def exit_app() -> None:
         print("Thanks for using our app")
-        exit()
+        exit(0)
 
     def router(self) -> None:
         self.welcome_page()
@@ -108,5 +106,4 @@ class AppInterface:
 
 
 if __name__ == '__main__':
-    ui = AppInterface()
-    ui.router()
+    AppInterface().router()

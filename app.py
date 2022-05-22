@@ -25,21 +25,23 @@ class MailClient:
         self.__connection_context = ssl.create_default_context()
 
     @contextmanager
-    def ssl_connected(self, email: str, password: str) -> None:
+    def ssl_connected(self, email: str, password: str, action=lambda: None) -> None:
         # Create a secure SSL context
         with smtp.SMTP_SSL(self.smtp_host, self.port, context=self.__connection_context) as mail_server:
             try:
                 # mail_server.connect(email, self.port)
                 mail_server.login(email, password)
                 yield mail_server
-
+            except RuntimeError("generator didn't yield"):
+                pass
             except smtp.SMTPAuthenticationError:
                 print("Username and Password not accepted")
+                action()
             finally:
                 mail_server.close()
 
     @contextmanager
-    def tls_connected(self, email: str, password: str) -> None:
+    def tls_connected(self, email: str, password: str, action=lambda: None) -> None:
         try:
             server = smtp.SMTP(host=self.smtp_host, port=self.port)
             server.ehlo()
@@ -49,16 +51,18 @@ class MailClient:
             yield server
         except Exception as e:
             print("Authentication unsuccessful!")
+            action()
         finally:
             server.close()
 
     @contextmanager
-    def imap_connected(self, email: str, password: str, read_only=False) -> None:
+    def imap_connected(self, email: str, password: str, read_only=False, action=lambda: None) -> None:
         try:
             server = imap.connect(self.imap_host, email, password, ssl=True, port=993, read_only=read_only)
             yield server
         except Exception as e:
             print(e)
+            action()
         finally:
             server.quit()
 
@@ -170,36 +174,32 @@ class EmailAccountManager(Email):
         self.set_credentials()
         self.set_mail_client()
         mail_client_connection = self.__mail_client().ssl_connected
-        if self.__mail_client == OutlookClient or self.__mail_client == IcloudClient:
+        tls_clients = [OutlookClient, IcloudClient]
+        if self.__mail_client in tls_clients:
             mail_client_connection = self.__mail_client().tls_connected
 
-        try:
-            with mail_client_connection(self.email, self.password):
-                pass
-        except smtp.SMTPAuthenticationError:
-            print("Wrong email or password!")
-            self.login()
-        else:
+        with mail_client_connection(self.email, self.password, action=self.login):
             self.account_valid = True
             print("Account authenticated !")
             self.__store_account_credentials(username=username)
 
     def __store_account_credentials(self, username) -> None:
         db = db_file.Database()
-        with db.database_connection() as cursor:
-            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
+        with db.database_connected() as cursor:
+            user_id = str(cursor.start("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
                 "('',)'")
-            client_id = str(cursor.execute("SELECT client_id FROM clients WHERE client_name = ?",
-                                           (self.domain_name,)).fetchone()).strip("('',)'")
-            cursor.execute("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)",
-                           (self.email, self.password, user_id, client_id))
+            client_id = str(cursor.start("SELECT client_id FROM clients WHERE client_name = ?",
+                                         (self.domain_name,)).fetchone()).strip("('',)'")
+            cursor.start("INSERT INTO user_accounts (email, email_password, user_id, client_id) VALUES (?,?,?,?)",
+                         (self.email, self.password, user_id, client_id))
 
-    def get_user_accounts(self, username) -> list:
+    @staticmethod
+    def get_user_accounts(username) -> list:
         db = db_file.Database()
-        with db.database_connection() as cursor:
-            user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()) \
+        with db.database_connected() as cursor:
+            user_id = str(cursor.start("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()) \
                 .strip("('',)'")
-            accounts = [row for row in cursor.execute("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
+            accounts = [row for row in cursor.start("SELECT email FROM user_accounts WHERE user_id = ?", (user_id,))]
         return accounts
 
     def store_emails(self) -> None:
@@ -250,13 +250,11 @@ class EmailSender(Email):
         self.__message = self._html_to_text(self.__message)
 
     def set_attachment(self) -> MIMEBase:
-
         self.__file_name = filedialog.askopenfilename(title="Open a Text File", filetypes=self.__file_types)
         self.__headers = ("Content-Disposition", f"attachment; filename= {format(self.__file_name)}")
         with open(self.__file_name, 'rb') as attachment:
             attach = MIMEBase('application', 'octet-stream')
             attach.set_payload(attachment.read())
-
         encoders.encode_base64(attach)
         attach.add_header(self.__headers[0], self.__headers[1])
         return attach
@@ -282,7 +280,6 @@ class EmailSender(Email):
         return message
 
     def set_mail_client(self) -> None:
-
         selected_mail_client = self.set_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
@@ -292,21 +289,17 @@ class EmailSender(Email):
             mail_client_connection = self.__mail_client().tls_connected
 
         with mail_client_connection(self.__from, self.__password) as connection:
-            try:
-                connection.sendmail(self.__from, self.__to, self.__mail_init().as_string())
-            except RuntimeError("generator didn't yield"):
-                pass
-            else:
-                self.store_emails()
+            connection.sendmail(self.__from, self.__to, self.__mail_init().as_string())
+            self.store_emails()
 
     def login(self, sender=None) -> None:
         """ Login into the email client.
         """
         db = db_file.Database()
 
-        with db.database_connection() as cursor:
+        with db.database_connected() as cursor:
             password = str(
-                cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip(
+                cursor.start("SELECT email_password FROM user_accounts WHERE email = ?", (sender,)).fetchone()).strip(
                 "('',)'")
         self.set_sender(sender)
         self.set_password(password=password)
@@ -321,9 +314,9 @@ class EmailSender(Email):
     def store_emails(self) -> None:
         db = db_file.Database()
         date_sent = str(datetime.now()) + str(datetime.today())
-        with db.database_connection() as cursor:
-            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
-                                                (self.__from,)).fetchone()).strip("('',)'"))
+        with db.database_connected() as cursor:
+            account_id = int(str(cursor.start("SELECT account_id FROM user_accounts WHERE email = ?",
+                                              (self.__from,)).fetchone()).strip("('',)'"))
             stored_email = [self.__from, self.__to, self.__message, self.__subject, date_sent, account_id, "sent"]
             cursor.executemany(
                 "INSERT INTO emails (sender, recipient, message, title, date_sent, account_id, email_type)"
@@ -354,11 +347,10 @@ class EmailReceiver(Email):
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
     def login(self, receiver=None) -> None:
-
         db = db_file.Database()
-        with db.database_connection() as cursor:
-            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?",
-                                          (receiver,)).fetchone()).strip("('',)'")
+        with db.database_connected() as cursor:
+            password = str(cursor.start("SELECT email_password FROM user_accounts WHERE email = ?",
+                                        (receiver,)).fetchone()).strip("('',)'")
         self.set_email(receiver)
         self.set_password(password=password)
         self.set_mail_client()
@@ -392,20 +384,21 @@ class EmailReceiver(Email):
 
     def get_unseen_emails_number(self, email) -> int:
         db = db_file.Database()
-        with db.database_connection() as cursor:
-            password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?", (email,)).fetchone()).strip("('',)'")
+        with db.database_connected() as cursor:
+            password = str(
+                cursor.start("SELECT email_password FROM user_accounts WHERE email = ?", (email,)).fetchone()).strip(
+                "('',)'")
         self.login(email)
         mail_client_connection = self.__mail_client().imap_connected
         with mail_client_connection(email, password, read_only=True) as connection:
             emails = list(connection.unseen())
-
         return len(emails)
 
     def store_emails(self) -> None:
         db = db_file.Database()
-        with db.database_connection() as cursor:
-            account_id = int(str(cursor.execute("SELECT account_id FROM user_accounts WHERE email = ?",
-                                                (self.__email,)).fetchone()).strip("('',)'"))
+        with db.database_connected() as cursor:
+            account_id = int(str(cursor.start("SELECT account_id FROM user_accounts WHERE email = ?",
+                                              (self.__email,)).fetchone()).strip("('',)'"))
             for mail in self.received_emails:
                 message = self._html_to_text(mail.body)
                 stored_email = [mail.from_addr, mail.to, message, mail.title, mail.date, account_id, "received"]
