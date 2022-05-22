@@ -1,4 +1,5 @@
 import sqlite3 as sql
+
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 

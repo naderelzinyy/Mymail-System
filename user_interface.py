@@ -1,8 +1,9 @@
 
-import database as db_file
 import app as app_file
-from termcolor import colored
+import database as db_file
+
 from pyfiglet import Figlet
+from termcolor import colored
 
 
 class AppInterface:
