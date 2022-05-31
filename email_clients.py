@@ -31,6 +31,7 @@ class MailClient:
 
     @contextmanager
     def tls_connected(self, email: str, password: str, action=lambda: None) -> None:
+        server = None
         try:
             server = smtp.SMTP(host=self.smtp_host, port=self.port)
             server.ehlo()
@@ -46,6 +47,7 @@ class MailClient:
 
     @contextmanager
     def imap_connected(self, email: str, password: str, read_only=False, action=lambda: None) -> None:
+        server = None
         try:
             server = imap.connect(self.imap_host, email, password, ssl=True, port=993, read_only=read_only)
             yield server

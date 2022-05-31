@@ -79,7 +79,7 @@ class AppInterface:
         print("Enter help to list commands.")
 
     def register_page(self) -> None:
-        register = db_file.Register()
+        register = user_session.Register()
         try:
             register.execute()
         except Exception as e:

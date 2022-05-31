@@ -37,7 +37,7 @@ class Email(ABC):
         pass
 
     @abstractmethod
-    def login(self, username=None):
+    def login(self, username: str = None):
         pass
 
     @abstractmethod
@@ -81,7 +81,7 @@ class EmailAccountManager(Email):
         self.set_email()
         self.set_password()
 
-    def login(self, username=None) -> None:
+    def login(self, username: str = None) -> None:
         """
         Checks if the credentials are valid or not.
         """
@@ -97,7 +97,7 @@ class EmailAccountManager(Email):
             print("Account authenticated !")
             self.__store_account_credentials(username=username)
 
-    def __store_account_credentials(self, username) -> None:
+    def __store_account_credentials(self, username: str) -> None:
         db = db_file.Database()
         with db.database_connected() as cursor:
             user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()).strip(
@@ -108,7 +108,7 @@ class EmailAccountManager(Email):
                            (self.email, self.password, user_id, client_id))
 
     @staticmethod
-    def get_user_accounts(username) -> list:
+    def get_user_accounts(username: str) -> list:
         db = db_file.Database()
         with db.database_connected() as cursor:
             user_id = str(cursor.execute("SELECT user_id FROM user WHERE username = ?", (username,)).fetchone()) \
@@ -146,7 +146,7 @@ class EmailSender(Email):
                              ('Python Files', '*.py'),
                              ('all files', '.*')]
 
-    def set_password(self, password=None) -> None:
+    def set_password(self, password: str = None) -> None:
         self.__password = password
 
     def set_sender(self, sender: str) -> None:
@@ -207,7 +207,7 @@ class EmailSender(Email):
             print(colored("Email successfully sent.", 'green'))
             self.store_emails()
 
-    def login(self, sender=None) -> None:
+    def login(self, sender: str = None) -> None:
         """ Login into the email client.
         """
         db = db_file.Database()
@@ -246,10 +246,10 @@ class EmailReceiver(Email):
         self.__mail_client = None
         self.received_emails = []
 
-    def set_email(self, receiver) -> None:
+    def set_email(self, receiver: str) -> None:
         self.__email = receiver
 
-    def set_password(self, password=None) -> None:
+    def set_password(self, password: str = None) -> None:
         self.__password = password
 
     def get_domain_name(self) -> str:
@@ -261,7 +261,7 @@ class EmailReceiver(Email):
         selected_mail_client = self.get_domain_name()
         self.__mail_client = super().mail_clients.get(selected_mail_client)
 
-    def login(self, receiver=None) -> None:
+    def login(self, receiver: str = None) -> None:
         db = db_file.Database()
         with db.database_connected() as cursor:
             password = str(cursor.execute("SELECT email_password FROM user_accounts WHERE email = ?",
@@ -297,7 +297,7 @@ class EmailReceiver(Email):
                 #     print("Attachment : ", rec_email.attachments)
                 # print("Date: ", rec_email.date)
 
-    def get_unseen_emails_number(self, email) -> int:
+    def get_unseen_emails_number(self, email: str) -> int:
         db = db_file.Database()
         with db.database_connected() as cursor:
             password = str(

@@ -26,11 +26,11 @@ class UserSession(ABC):
         pass
 
     @abstractmethod
-    def _username_check(self, username):
+    def _username_check(self, username: str):
         pass
 
     @abstractmethod
-    def _email_check(self, email):
+    def _email_check(self, email: str):
         pass
 
     @abstractmethod
@@ -77,11 +77,11 @@ class Register(UserSession):
         year = str(input("year: "))
         self.dob = str(year+"-"+month+"-"+day+" 00:00:00")
 
-    def _username_check(self, username) -> bool:
+    def _username_check(self, username: str) -> bool:
         usernames = [row[0] for row in self.db.returnable_execute("SELECT username FROM user", iteratable=True)]
         return not (username in usernames)
 
-    def _email_check(self, email) -> bool:
+    def _email_check(self, email: str) -> bool:
         emails = [row[0] for row in self.db.returnable_execute("SELECT email FROM user", iteratable=True)]
         return not (email in emails)
 
@@ -139,10 +139,10 @@ class Login(UserSession):
             self.role['user'] = True
             print('logged in!!')
 
-    def _username_check(self, username) -> None:
+    def _username_check(self, username: str) -> None:
         pass
 
-    def _email_check(self, email) -> None:
+    def _email_check(self, email: str) -> None:
         pass
 
     def _set_name(self) -> None:
